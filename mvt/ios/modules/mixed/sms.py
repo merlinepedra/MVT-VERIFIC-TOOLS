@@ -32,12 +32,21 @@ class SMS(IOSExtraction):
 
     def serialize(self, record: dict) -> None:
         text = record["text"].replace("\n", "\\n")
-        return {
-            "timestamp": record["isodate"],
-            "module": self.__class__.__name__,
-            "event": "sms_received",
-            "data": f"{record['service']}: {record['guid']} \"{text}\" from {record['phone_number']} ({record['account']})"
-        }
+        sms_data = f"{record['service']}: {record['guid']} \"{text}\" from {record['phone_number']} ({record['account']})"
+        return [
+            {
+                "timestamp": record["isodate"],
+                "module": self.__class__.__name__,
+                "event": "sms_received",
+                "data": sms_data
+            },
+            {
+                "timestamp": record["isodate_read"],
+                "module": self.__class__.__name__,
+                "event": "sms_read",
+                "data": sms_data
+            },
+        ]
 
     def check_indicators(self) -> None:
         if not self.indicators:
@@ -99,6 +108,7 @@ class SMS(IOSExtraction):
 
             # We convert Mac's ridiculous timestamp format.
             message["isodate"] = convert_timestamp_to_iso(convert_mactime_to_unix(message["date"]))
+            message["isodate_read"] = convert_timestamp_to_iso(convert_mactime_to_unix(message["date_read"]))
             message["direction"] = ("sent" if message.get("is_from_me", 0) == 1 else "received")
 
             # Sometimes "text" is None instead of empty string.
